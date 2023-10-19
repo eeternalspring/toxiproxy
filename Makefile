@@ -8,6 +8,9 @@ MALLOC_ENV := $(shell [ $(OS) = Darwin -a $(GO_MINOR_VERSION) -eq 17 -a $(GO_PAT
 .PHONY: all
 all: setup build test bench fmt lint
 
+.PHONY: dev
+dev: setup build-dev fmt-dev
+
 .PHONY: test
 test:
 	# NOTE: https://github.com/golang/go/issues/49138
@@ -35,6 +38,12 @@ fmt:
 	golangci-lint run --fix
 	shfmt -l -s -w -kp -i 2 scripts/test-*
 
+.PHONY: fmt-dev
+fmt-dev:
+	go fmt ./...
+	goimports -w **/*.go
+	shfmt -l -s -w -kp -i 2 scripts/test-*
+
 .PHONY: lint
 lint:
 	golangci-lint run
@@ -46,6 +55,11 @@ lint:
 build: dist clean
 	go build -ldflags="-s -w" -o ./dist/toxiproxy-server ./cmd/server
 	go build -ldflags="-s -w" -o ./dist/toxiproxy-cli ./cmd/cli
+
+.PHONY: build-dev
+build-dev: dist clean
+	go build -o ./dist/toxiproxy-server ./cmd/server
+	go build -o ./dist/toxiproxy-cli ./cmd/cli
 
 .PHONY: container.build
 container.build:
