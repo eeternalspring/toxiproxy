@@ -3,12 +3,9 @@ package toxics
 import (
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/Shopify/toxiproxy/v2/stream"
 )
 
 type SnifferToxic struct {
@@ -33,8 +30,34 @@ func getOutputFile(path string) (*os.File, error) {
 	return f, nil
 }
 
-func (t *SnifferToxic) Pipe(stub *ToxicStub) {
+func (t *SnifferToxic) attack(buf []byte) MitmCallback {
+	stopWriting := false
+	file, openErr := getOutputFile("/tmp/eof-" + epochNowString() + t.Path + ".txt")
 
+	if openErr != nil {
+		fmt.Printf("LOG PREFIX Failed to open file")
+		stopWriting = true
+	}
+
+	if !stopWriting {
+		_, writeErr := file.Write([]byte(hex.Dump(buf)))
+		if writeErr != nil {
+			fmt.Printf("LOG PREFIX Error writing %+v\n", writeErr)
+			stopWriting = true
+			_, writeErr = file.Write([]byte("FAILED TO WRITE FULL FILE"))
+			if writeErr != nil {
+				fmt.Printf("LOG PREFIX Failed to write full file")
+			}
+		}
+	}
+
+	return MitmCallback{
+		WriteBack: true,
+	}
+}
+
+func (t *SnifferToxic) Pipe(stub *ToxicStub) {
+	MitmPipe(stub, t)
 }
 
 func init() {
