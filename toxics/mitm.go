@@ -11,29 +11,11 @@ import (
 	"github.com/Shopify/toxiproxy/v2/stream"
 )
 
-type SnifferToxic struct {
-	Path string `json:"path"`
-}
+type MitmToxic struct {}
 
-func epochNowString() string {
-	return strconv.FormatInt(time.Now().UnixMilli(), 10)
-}
+func MitmPipe(stub *ToxicStub, 
 
-func getOutputFile(path string) (*os.File, error) {
-	if path == "" {
-		path = "/tmp/" + epochNowString() + ".txt"
-	}
-
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0777)
-	if err != nil {
-		fmt.Printf("LOG PREFIX Failed to open file %+v\n", err)
-		return nil, err
-	}
-
-	return f, nil
-}
-
-func (t *SnifferToxic) Pipe(stub *ToxicStub) {
+func (t *MitmToxic) Pipe(stub *ToxicStub) {
 	buf := make([]byte, 32*1024)
 	writer := stream.NewChanWriter(stub.Output)
 	reader := stream.NewChanReader(stub.Input)
@@ -74,10 +56,8 @@ func (t *SnifferToxic) Pipe(stub *ToxicStub) {
 			}
 		}
 	}
-
-	// fmt.Printf("LOG PREFIX out of loop\n")
 }
 
 func init() {
-	Register("sniffer", new(SnifferToxic))
+	Register("mitm", new(MitmToxic))
 }
