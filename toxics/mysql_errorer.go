@@ -13,7 +13,6 @@ const (
 )
 
 type MySQLErrorerToxic struct {
-	Path                 string `json:"path"`
 	ErrNo                int    `json:"errno"`
 	ErrMsg               string `json:"errmsg"`
 	query                bool
