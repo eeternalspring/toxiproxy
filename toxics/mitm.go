@@ -8,10 +8,11 @@ import (
 )
 
 type MitmCallback struct {
-	WriteBack bool
+	WriteBack             bool
+	OverwriteWrittenBytes int
 }
 type Mitm interface {
-	attack([]byte) MitmCallback
+	attack([]byte, int) MitmCallback
 }
 
 func MitmPipe(stub *ToxicStub, mitm Mitm) {
@@ -34,16 +35,21 @@ func MitmPipe(stub *ToxicStub, mitm Mitm) {
 			fmt.Printf("LOG PREFIX Got Error %+v\n", err)
 		}
 
-		ret := mitm.attack(buf[:n])
+		ret := mitm.attack(buf[:n], n)
 		if ret.WriteBack {
-			writer.Write(buf[:n])
+			writeBytes := n
+			if ret.OverwriteWrittenBytes > 0 {
+				writeBytes = ret.OverwriteWrittenBytes
+			}
+
+			writer.Write(buf[:writeBytes])
 		}
 	}
 }
 
 type MitmToxic struct{}
 
-func (t *MitmToxic) attack(buf []byte) MitmCallback {
+func (t *MitmToxic) attack(_ []byte, _ int) MitmCallback {
 	return MitmCallback{
 		WriteBack: true,
 	}

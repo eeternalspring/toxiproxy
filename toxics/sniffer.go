@@ -32,7 +32,7 @@ func getOutputFile(path string) (*os.File, error) {
 	return f, nil
 }
 
-func (t *SnifferToxic) attack(buf []byte) MitmCallback {
+func (t *SnifferToxic) attack(buf []byte, _ int) MitmCallback {
 	if !t.stopWriting {
 		_, writeErr := t.file.Write([]byte(hex.Dump(buf)))
 		if writeErr != nil {
