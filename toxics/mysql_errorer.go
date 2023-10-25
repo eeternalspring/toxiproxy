@@ -32,7 +32,7 @@ func itoleba(num int) []byte {
 	return buf[:3]
 }
 
-func (t *MySQLErrorerToxic) attack(buf []byte, count int) MitmCallback {
+func (t *MySQLErrorerToxic) attack(buf []byte) MitmCallback {
 	t.query = buf[COM_QUERY_INDEX] == COM_QUERY
 
 	// We do not want to block any of the packets that are being sent that are not COM_QUERY
@@ -63,7 +63,6 @@ func (t *MySQLErrorerToxic) attack(buf []byte, count int) MitmCallback {
 	// buf[4] is the COM_QUERY byte, this remains unchanged @ 0x03
 	// buf[5+] is the payload, this is what we want to rewrite
 	// if our errpacketSize < count, we need to tell the writer to only write the first errpacketSize bytes
-	// TODO, what do we do if we are writing _more_?
 	buf[0] = errpacketSizePacket[0]
 	buf[1] = errpacketSizePacket[1]
 	buf[2] = errpacketSizePacket[2]

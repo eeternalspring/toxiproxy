@@ -11,12 +11,17 @@ type MitmCallback struct {
 	WriteBack             bool
 	OverwriteWrittenBytes int
 }
+
 type Mitm interface {
-	attack([]byte, int) MitmCallback
+	attack([]byte) MitmCallback
 }
 
+const (
+	MITM_BUFFER_SIZE = 32 * 1024
+)
+
 func MitmPipe(stub *ToxicStub, mitm Mitm) {
-	buf := make([]byte, 32*1024)
+	buf := make([]byte, MITM_BUFFER_SIZE)
 	writer := stream.NewChanWriter(stub.Output)
 	reader := stream.NewChanReader(stub.Input)
 	reader.SetInterrupt(stub.Interrupt)
@@ -35,7 +40,7 @@ func MitmPipe(stub *ToxicStub, mitm Mitm) {
 			fmt.Printf("LOG PREFIX Got Error %+v\n", err)
 		}
 
-		ret := mitm.attack(buf[:n], n)
+		ret := mitm.attack(buf)
 		if ret.WriteBack {
 			writeBytes := n
 			if ret.OverwriteWrittenBytes > 0 {
@@ -49,7 +54,7 @@ func MitmPipe(stub *ToxicStub, mitm Mitm) {
 
 type MitmToxic struct{}
 
-func (t *MitmToxic) attack(_ []byte, _ int) MitmCallback {
+func (t *MitmToxic) attack(_ []byte) MitmCallback {
 	return MitmCallback{
 		WriteBack: true,
 	}
