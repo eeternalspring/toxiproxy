@@ -1,7 +1,7 @@
 package toxics
 
 import (
-	"encoding/binary"
+	"fmt"
 	"strconv"
 )
 
@@ -21,15 +21,16 @@ type MySQLErrorerToxic struct {
 
 func (t *MySQLErrorerToxic) buildSignal() string {
 	return "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '" + t.ErrMsg + "', MYSQL_ERRNO = " + strconv.Itoa(t.ErrNo)
+	// return "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'foobar', MYSQL_ERRNO = 1290"
 }
 
 // int to little endian byte array
-func itoleba(num int) []byte {
-	buf := make([]byte, 4)
-	binary.LittleEndian.PutUint16(buf, uint16(num))
-
-	return buf[:3]
-}
+// func itoleba(num int) []byte {
+// 	buf := make([]byte, 4)
+// 	binary.LittleEndian.PutUint16(buf, uint16(num))
+//
+// 	return buf[:3]
+// }
 
 func (t *MySQLErrorerToxic) attack(buf []byte) MitmCallback {
 	t.query = buf[COM_QUERY_INDEX] == COM_QUERY
@@ -52,9 +53,12 @@ func (t *MySQLErrorerToxic) attack(buf []byte) MitmCallback {
 		return MitmCallback{WriteBack: false}
 	}
 
-	errpacket := []byte(t.buildSignal())
+	errpacketStr := t.buildSignal()
+	fmt.Printf("DEBUG PREFIX errpacket %+v\n", errpacketStr)
+	errpacket := []byte(errpacketStr)
+	fmt.Printf("DEBUG PREFIX errpacket %+v\n", string(errpacket))
 	errpacketSize := len(errpacket) + 1 // the +1 here is because packet size is the payload + the command type
-	errpacketSizePacket := itoleba(errpacketSize)
+	// errpacketSizePacket := itoleba(errpacketSize)
 
 	// At this point, we have the packet we want to rewrite
 	// buf[0], [1], and [2] are the packet size, in little endian, errpacketSizePacket
@@ -62,19 +66,23 @@ func (t *MySQLErrorerToxic) attack(buf []byte) MitmCallback {
 	// buf[4] is the COM_QUERY byte, this remains unchanged @ 0x03
 	// buf[5+] is the payload, this is what we want to rewrite
 	// if our errpacketSize < count, we need to tell the writer to only write the first errpacketSize bytes
-	buf[0] = errpacketSizePacket[0]
-	buf[1] = errpacketSizePacket[1]
-	buf[2] = errpacketSizePacket[2]
+	// int 0000 0000 - 0000 0000 - 0000 0000 - 0000 0000
+	//         D           C           B           A
+	// we want A B C
+	buf[0] = byte(errpacketSize)       // errpacketSizePacket[0]
+	buf[1] = byte(errpacketSize >> 8)  // errpacketSizePacket[1]
+	buf[2] = byte(errpacketSize >> 16) // errpacketSizePacket[2]
 
-	writeBytes := 5
+	// sz sz sz sq cm 5
+	writeBytes := 0
 	for writeBytes < (errpacketSize - 1) /* the -1 here is due to the +1 above */ {
-		buf[writeBytes] = errpacket[writeBytes]
+		buf[writeBytes+5] = errpacket[writeBytes]
 		writeBytes = writeBytes + 1
 	}
 
 	return MitmCallback{
 		WriteBack:             true,
-		OverwriteWrittenBytes: errpacketSize,
+		OverwriteWrittenBytes: errpacketSize + 4,
 	}
 }
 

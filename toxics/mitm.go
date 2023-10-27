@@ -40,12 +40,18 @@ func MitmPipe(stub *ToxicStub, mitm Mitm) {
 			fmt.Printf("LOG PREFIX Got Error %+v\n", err)
 		}
 
+		fmt.Printf("DEBUG PREFIX attacking w/ buf: %+v\n", buf)
 		ret := mitm.attack(buf)
+		fmt.Printf("DEBUG PREFIX ret: %+v\n", ret)
+		fmt.Printf("DEBUG PREFIX new buf: %+v\n", buf)
 		if ret.WriteBack {
 			writeBytes := n
 			if ret.OverwriteWrittenBytes > 0 {
 				writeBytes = ret.OverwriteWrittenBytes
 			}
+
+			fmt.Printf("DEBUG PREFIX writeBytes %+v\n", writeBytes)
+			fmt.Printf("DEBUG PREFIX writing buf %+v\n", string(buf[5:writeBytes]))
 
 			writer.Write(buf[:writeBytes])
 		}
@@ -59,8 +65,8 @@ func (t *MitmToxic) attack(_ []byte) MitmCallback {
 		WriteBack: true,
 	}
 }
-func (t *MitmToxic) Pipe(stub *ToxicStub) {
 
+func (t *MitmToxic) Pipe(stub *ToxicStub) {
 }
 
 func init() {
